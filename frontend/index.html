@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://cdnjs.cloudflare.com;">
+    <title>TradeIF - 量化回测平台</title>
+    <!-- TradingView Lightweight Charts - 专业K线图表库 -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Monaco Editor - VS Code编辑器 -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+    <style>
+        :root {
+            --primary-color: #2962FF;
+            --primary-dark: #1E53E5;
+            --success-color: #26A69A;
+            --danger-color: #EF5350;
+            --warning-color: #FF9800;
+            --bg-primary: #131722;
+            --bg-secondary: #1E222D;
+            --bg-tertiary: #2A2E39;
+            --text-primary: #D1D4DC;
+            --text-secondary: #787B86;
+            --border-color: #2A2E39;
+            --hover-bg: #2A2E39;
+            --chart-bg: #131722;
+            --grid-color: #2A2E39;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        /* 顶部导航栏 */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.5rem;
+            max-width: 100%;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .header-stat span {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        /* 主容器 */
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+            gap: 0;
+            overflow: hidden;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            height: 100%;
+            min-width: 280px;
+            max-width: 50vw;
+            width: 350px;
+            flex-shrink: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1.5rem;
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+        
+        /* 调整器 */
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: var(--border-color);
+            position: relative;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        
+        .resizer:hover {
+            background: var(--primary-color);
+        }
+        
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            background: var(--bg-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 表单组件 */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: var(--bg-secondary);
+            box-shadow: 0 0 0 3px rgba(41, 98, 255, 0.1);
+        }
+        
+        .form-group input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(41, 98, 255, 0.3);
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(41, 98, 255, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--hover-bg);
+            box-shadow: none;
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            box-shadow: 0 2px 8px rgba(38, 166, 154, 0.3);
+        }
+        
+        .btn-success:hover {
+            background: #229A8E;
+            box-shadow: 0 4px 12px rgba(38, 166, 154, 0.4);
+        }
+        
+        .btn-danger {
+            background: var(--danger-color);
+            box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3);
+        }
+        
+        .btn-danger:hover {
+            background: #E53935;
+            box-shadow: 0 4px 12px rgba(239, 83, 80, 0.4);
+        }
+        
+        /* 标签页 */
+        .tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tab-btn {
+            padding: 1rem 1.75rem;
+            background: none;
+            border: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--hover-bg);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            background: var(--bg-primary);
+        }
+        
+        .tab-content {
+            padding: 1.5rem;
+            padding-bottom: 3rem;
+            height: calc(100vh - 120px);
+            display: none;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tab-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .tab-content::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        .tab-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        /* 图表容器 - TradingView风格 */
+        .chart-container {
+            width: 100%;
+            height: calc(100vh - 280px);
+            min-height: 450px;
+            max-height: 750px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            overflow: visible;
+            background: var(--chart-bg);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            margin-bottom: 2rem;
+            padding-bottom: 10px;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(19, 23, 34, 0.96);
+            border: 1px solid rgba(42, 46, 57, 0.8);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.1);
+            z-index: 1000;
+            min-width: 220px;
+            max-width: 320px;
+            line-height: 1.5;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .chart-tooltip .tooltip-date {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(42, 98, 255, 0.2);
+            padding-bottom: 0.375rem;
+        }
+
+        .chart-tooltip .tooltip-values {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.375rem 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .chart-tooltip .tooltip-values span {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        .chart-tooltip .tooltip-values span[colspan="2"] {
+            grid-column: 1 / -1;
+        }
+
+        .chart-tooltip .tooltip-values strong {
+            color: var(--text-primary);
+            margin-left: 0.25rem;
+            font-weight: 600;
+        }
+        
+        .chart-tooltip .tooltip-trade {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(197, 203, 206, 0.15);
+        }
+        
+        .chart-tooltip .tooltip-trade div {
+            line-height: 1.6;
+        }
+        
+        /* 图表工具栏样式 */
+        .chart-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: rgba(19, 23, 34, 0.95);
+            border-bottom: 1px solid var(--border-color);
+            height: 40px;
+            user-select: none;
+        }
+        
+        .chart-toolbar-left,
+        .chart-toolbar-right {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+        
+        .chart-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.375rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chart-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        
+        .chart-btn-active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .chart-btn-active:hover {
+            background: var(--primary-dark);
+        }
+        
+        .chart-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 0.5rem;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+        }
+
+        #tradingview-chart, #equity-chart {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }        /* 统计卡片网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .stat-card h3 {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .stat-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stat-card.positive .value {
+            color: var(--success-color);
+        }
+        
+        .stat-card.negative .value {
+            color: var(--danger-color);
+        }
+        
+        /* 消息提示 */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: rgba(239, 83, 80, 0.1);
+            color: var(--danger-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--danger-color);
+            font-size: 0.875rem;
+        }
+        
+        .success {
+            background: rgba(38, 166, 154, 0.1);
+            color: var(--success-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--success-color);
+            font-size: 0.875rem;
+        }
+        
+        /* 表格样式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        tr:hover {
+            background: var(--hover-bg);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Monaco编辑器容器 */
+        #editor-container {
+            height: 600px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* 策略模板选择器 */
+        .template-selector {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        
+        .template-selector label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .template-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+        
+        .template-btn {
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .template-btn:hover {
+            background: var(--hover-bg);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .template-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        /* 数据管理样式 */
+        .cache-management-container {
+            padding: 0;
+        }
+        
+        .cache-actions {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .cache-actions .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .cache-status h4 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .status-value {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .status-good {
+            color: var(--success-color);
+        }
+        
+        .status-warning {
+            color: var(--warning-color);
+        }
+        
+        .status-error {
+            color: var(--danger-color);
+        }
+        
+        /* 策略参数切换样式 */
+        .strategy-params {
+            transition: all 0.3s ease;
+        }
+        
+        .strategy-params.hidden {
+            display: none !important;
+        }
+        
+        /* 交易列表样式 */
+        .trade-positive {
+            color: var(--success-color) !important;
+        }
+        
+        .trade-negative {
+            color: var(--danger-color) !important;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 968px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                max-width: 100%;
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }
+            
+            .resizer {
+                display: none;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">IF</div>
+                <span>TradeIF</span>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span id="header-status">● 系统就绪</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="form-group">
+                <label for="stockCode">股票代码</label>
+                <input type="text" id="stockCode" name="stockCode" value="000001.SZ" placeholder="请输入股票代码">
+                <small>格式:000001.SZ 或 600000.SH</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="startDate">开始日期</label>
+                <input type="date" id="startDate" name="startDate">
+            </div>
+            
+            <div class="form-group">
+                <label for="endDate">结束日期</label>
+                <input type="date" id="endDate" name="endDate">
+            </div>
+            
+            <div class="form-group">
+                <label for="strategy">交易策略</label>
+                <select id="strategy" name="strategy" onchange="onStrategyChange()">
+                    <option value="ma_cross">双均线交叉策略</option>
+                    <option value="rsi">RSI超买超卖策略</option>
+                    <option value="bollinger">布林带策略</option>
+                    <option value="custom">自定义策略</option>
+                </select>
+            </div>
+            
+            <!-- 策略参数配置 -->
+            <div id="strategyParams">
+                <!-- 双均线策略参数 -->
+                <div id="ma_cross_params" class="strategy-params">
+                    <div class="form-group">
+                        <label for="shortWindow">短期均线</label>
+                        <input type="number" id="shortWindow" name="shortWindow" value="20" min="2" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="longWindow">长期均线</label>
+                        <input type="number" id="longWindow" name="longWindow" value="50" min="2" max="200">
+                    </div>
+                </div>
+                
+                <!-- RSI策略参数 -->
+                <div id="rsi_params" class="strategy-params" style="display: none;">
+                    <div class="form-group">
+                        <label for="rsiPeriod">RSI周期</label>
+                        <input type="number" id="rsiPeriod" name="rsiPeriod" value="14" min="2" max="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="oversoldThreshold">超卖阈值</label>
+                        <input type="number" id="oversoldThreshold" name="oversoldThreshold" value="30" min="10" max="40" step="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="overboughtThreshold">超买阈值</label>
+                        <input type="number" id="overboughtThreshold" name="overboughtThreshold" value="70" min="60" max="90" step="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rsiStopLoss">止损比例</label>
+                        <input type="number" id="rsiStopLoss" name="rsiStopLoss" value="0.05" min="0.01" max="0.20" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rsiTakeProfit">止盈比例</label>
+                        <input type="number" id="rsiTakeProfit" name="rsiTakeProfit" value="0.10" min="0.02" max="0.50" step="0.01">
+                    </div>
+                </div>
+                
+                <!-- 布林带策略参数 -->
+                <div id="bollinger_params" class="strategy-params" style="display: none;">
+                    <div class="form-group">
+                        <label for="bollingerPeriod">布林带周期</label>
+                        <input type="number" id="bollingerPeriod" name="bollingerPeriod" value="20" min="5" max="50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="stdMultiplier">标准差倍数</label>
+                        <input type="number" id="stdMultiplier" name="stdMultiplier" value="2.0" min="1.0" max="3.0" step="0.1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bollingerStopLoss">止损比例</label>
+                        <input type="number" id="bollingerStopLoss" name="bollingerStopLoss" value="0.05" min="0.01" max="0.20" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bollingerTakeProfit">止盈比例</label>
+                        <input type="number" id="bollingerTakeProfit" name="bollingerTakeProfit" value="0.10" min="0.02" max="0.50" step="0.01">
+                    </div>
+                </div>
+                
+                <!-- 自定义策略参数 -->
+                <div id="custom_params" class="strategy-params" style="display: none;">
+                    <div class="form-group">
+                        <label for="customCodeEditor">自定义交易逻辑代码</label>
+                        <div id="customCodeEditor" style="width: 100%; height: 600px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;"></div>
+                        <div style="margin-top: 8px; color: var(--text-secondary); font-size: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 4px;">
+                            💡 <strong>提示：</strong>支持语法高亮、代码折叠、自动补全等专业功能。<br>
+                            <strong>可用变量：</strong><code style="color: var(--primary-color);">current</code>, <code style="color: var(--primary-color);">prev</code>, <code style="color: var(--primary-color);">position</code>, <code style="color: var(--primary-color);">entry_price</code>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>预设策略模板</label>
+                        <select id="templateSelect" name="templateSelect" onchange="loadTemplate()">
+                            <option value="">选择模板...</option>
+                            <option value="ma_cross">双均线交叉 (修正版)</option>
+                            <option value="rsi_divergence">RSI超买超卖 (修正版)</option>
+                            <option value="bollinger_bounce">布林带反弹 (修正版)</option>
+                            <option value="volume_breakout">成交量突破 (修正版)</option>
+                            <option value="multi_factor">多因子综合策略 (新)</option>
+                            <option value="custom_indicators">自定义指标策略 (新)</option>
+                            <option value="mean_reversion">均值回归策略 (新)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; gap: 0.75rem;">
+                        <button type="button" class="btn btn-success" onclick="validateCode()">
+                            <span>✓</span> 验证代码
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="clearCode()">
+                            <span>✗</span> 清空代码
+                        </button>
+                    </div>
+                    
+                    <div id="codeValidation" style="margin-top: 10px; padding: 12px; border-radius: 6px; display: none; font-size: 0.875rem;"></div>
+                </div>
+            </div>
+            
+            
+            <div class="form-group">
+                <label for="initialCapital">初始资金</label>
+                <input type="number" id="initialCapital" name="initialCapital" value="100000" min="10000" step="10000">
+            </div>
+            
+            <button class="btn" onclick="loadData()">加载数据</button>
+            <button class="btn btn-secondary" onclick="runBacktest()">运行回测</button>
+        </div>
+        
+        <!-- 可拖拽调整大小的分隔条 -->
+        <div class="resizer" id="resizer"></div>
+        
+        <!-- 主内容 -->
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('chart', this)">价格图表</button>
+                <button class="tab-btn" onclick="switchTab('backtest', this)">回测结果</button>
+                <button class="tab-btn" onclick="switchTab('trades', this)">交易记录</button>
+                <button class="tab-btn" onclick="switchTab('cache-management', this)">数据管理</button>
+            </div>
+            
+            <!-- 图表标签页 -->
+            <div id="chart" class="tab-content active">
+                <div id="chartLoading" class="loading" style="display: none;">正在加载数据...</div>
+                <div id="chartError" class="error" style="display: none;"></div>
+                
+                <div class="chart-container" id="tradingview-chart"></div>
+            </div>
+            
+            <!-- 回测结果标签页 -->
+            <div id="backtest" class="tab-content">
+                <div id="backtestLoading" class="loading" style="display: none;">正在运行回测...</div>
+                <div id="backtestError" class="error" style="display: none;"></div>
+                
+                <div id="backtestStats" class="stats-grid"></div>
+                <div class="chart-container" id="equity-chart"></div>
+            </div>
+            
+            <!-- 交易记录标签页 -->
+            <div id="trades" class="tab-content">
+                <div id="tradesTable"></div>
+            </div>
+            
+            <div id="cache-management" class="tab-content">
+                <div class="cache-management-container">
+                    <h3>数据缓存管理</h3>
+                    
+                    <div class="cache-actions">
+                        <button class="btn" onclick="getCacheStatus()">检查缓存状态</button>
+                        <button class="btn" onclick="warmUpCache()">预热缓存</button>
+                        <button class="btn" onclick="updateStockList()">更新股票列表</button>
+                        <button class="btn btn-secondary" onclick="cleanupCache()">清理缓存</button>
+                    </div>
+                    
+                    <div id="cacheStatusContainer">
+                        <div id="cacheLoading" class="loading" style="display: none;">正在加载缓存信息...</div>
+                        <div id="cacheError" class="error" style="display: none;"></div>
+                        <div id="cacheSuccess" class="success" style="display: none;"></div>
+                        
+                        <div id="cacheStatus" class="cache-status">
+                            <h4>数据源状态</h4>
+                            <div id="sourceStatusTable"></div>
+                            
+                            <h4>缓存统计</h4>
+                            <div id="cacheStatsTable"></div>
+                            
+                            <h4>数据质量报告</h4>
+                            <div id="dataQualityTable"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- TradingView图表工具 -->
+    <script src="/static/chart_utils.js"></script>
+    
+    <script>
+        let currentData = null;
+        let backtestResults = null;
+        
+        // 设置默认日期
+        function setDefaultDates() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setFullYear(endDate.getFullYear() - 1);
+            
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        }
+        
+        // 切换标签页
+        function switchTab(tabName, targetElement) {
+            // 隐藏所有标签页
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // 显示选中的标签页
+            document.getElementById(tabName).classList.add('active');
+            
+            // 如果有目标元素（从按钮点击来的），则激活该按钮
+            if (targetElement) {
+                targetElement.classList.add('active');
+            } else {
+                // 如果没有目标元素，查找对应的标签按钮并激活
+                const tabButtons = document.querySelectorAll('.tab-btn');
+                tabButtons.forEach(btn => {
+                    if (btn.textContent.includes('价格图表') && tabName === 'chart') {
+                        btn.classList.add('active');
+                    } else if (btn.textContent.includes('回测结果') && tabName === 'backtest') {
+                        btn.classList.add('active');
+                    } else if (btn.textContent.includes('交易记录') && tabName === 'trades') {
+                        btn.classList.add('active');
+                    } else if (btn.textContent.includes('数据管理') && tabName === 'cache-management') {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+            
+            // 如果切换到数据管理页面，自动获取缓存状态
+            if (tabName === 'cache-management') {
+                getCacheStatus();
+            }
+        }
+        
+        // 显示加载状态
+        function showLoading(elementId) {
+            document.getElementById(elementId).style.display = 'block';
+        }
+        
+        // 隐藏加载状态
+        function hideLoading(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+        
+        // 显示错误信息
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+        
+        // 隐藏错误信息
+        function hideError(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+        
+        // 加载股票数据
+        async function loadData() {
+            const stockCode = document.getElementById('stockCode').value.trim();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!stockCode || !startDate || !endDate) {
+                alert('请填写完整的股票代码和日期！');
+                return;
+            }
+            
+            showLoading('chartLoading');
+            hideError('chartError');
+            
+            try {
+                const response = await fetch('/api/data/historical', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: stockCode,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.data && result.data.length > 0) {
+                    currentData = result.data;
+                    showSuccess('数据加载成功！');
+                    drawChart(currentData);
+                } else {
+                    throw new Error('未获取到数据，请检查股票代码和日期范围');
+                }
+            } catch (error) {
+                showError('chartError', `加载数据失败: ${error.message}`);
+            } finally {
+                hideLoading('chartLoading');
+            }
+        }
+        
+        // 绘制图表 - 使用TradingView Lightweight Charts
+        let currentPriceChart = null;
+        
+        function drawChart(data, trades = null) {
+            console.log('=== drawChart Called ===');
+            console.log('Data:', data ? data.length : 0);
+            console.log('Trades:', trades);
+            
+            const chartContainer = document.getElementById('tradingview-chart');
+            
+            if (!data || data.length === 0) {
+                chartContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">暂无数据</div>';
+                return;
+            }
+            
+            // 销毁旧图表
+            if (currentPriceChart) {
+                try {
+                    destroyChart(currentPriceChart);
+                } catch (e) {
+                    console.warn('销毁旧图表失败:', e);
+                }
+                currentPriceChart = null;
+            }
+            
+            // 使用新的TradingView图表工具
+            try {
+                currentPriceChart = createPriceChart('tradingview-chart', data, trades);
+            } catch (error) {
+                console.error('绘制图表失败:', error);
+                chartContainer.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--danger-color);">图表渲染失败: ${error.message}</div>`;
+            }
+        }
+        
+        // 绘制回测K线图（带交易信号）
+        function drawBacktestChart(data, trades) {
+            // 直接复用主图表函数，传递交易数据
+            drawChart(data, trades);
+            
+            // 如果需要特殊的回测图表，可以在这里自定义
+            // 目前使用同样的K线图显示逻辑
+        }
+        
+        // 计算移动平均线
+        function calculateMA(prices, period) {
+            const ma = [];
+            for (let i = 0; i < prices.length; i++) {
+                if (i < period - 1) {
+                    ma.push(null);
+                } else {
+                    const sum = prices.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                    ma.push(sum / period);
+                }
+            }
+            return ma;
+        }
+        
+        // 绘制净值曲线 - 使用TradingView Lightweight Charts
+        let currentEquityChart = null;
+        
+        function drawEquityCurve(equityData) {
+            const chartContainer = document.getElementById('equity-chart');
+            
+            if (!equityData || equityData.length === 0) {
+                chartContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">暂无权益数据</div>';
+                return;
+            }
+            
+            // 销毁旧图表
+            if (currentEquityChart) {
+                try {
+                    destroyChart(currentEquityChart);
+                } catch (e) {
+                    console.warn('销毁旧权益图表失败:', e);
+                }
+                currentEquityChart = null;
+            }
+            
+            // 使用新的TradingView图表工具
+            try {
+                currentEquityChart = createEquityChart('equity-chart', equityData);
+            } catch (error) {
+                console.error('绘制权益曲线失败:', error);
+                chartContainer.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--danger-color);">权益曲线渲染失败: ${error.message}</div>`;
+            }
+        }
+        
+        // 策略切换时显示/隐藏对应参数
+        function onStrategyChange() {
+            const strategy = document.getElementById('strategy').value;
+            
+            // 隐藏所有策略参数
+            document.querySelectorAll('.strategy-params').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 显示选中策略的参数
+            const paramsId = strategy + '_params';
+            const paramsEl = document.getElementById(paramsId);
+            if (paramsEl) {
+                paramsEl.style.display = 'block';
+            }
+            
+            // 如果是自定义策略,初始化Monaco编辑器
+            if (strategy === 'custom') {
+                // 延迟初始化,确保DOM已渲染
+                setTimeout(() => {
+                    if (!monacoEditor) {
+                        initMonacoEditor();
+                    }
+                }, 100);
+            }
+        }
+        
+                // 获取当前策略参数
+        function getCurrentStrategyParams() {
+            const strategy = document.getElementById('strategy').value;
+            const params = {};
+            
+            switch(strategy) {
+                case 'ma_cross':
+                    params.short_window = parseInt(document.getElementById('shortWindow').value);
+                    params.long_window = parseInt(document.getElementById('longWindow').value);
+                    break;
+                    
+                case 'rsi':
+                    params.period = parseInt(document.getElementById('rsiPeriod').value);
+                    params.oversold_threshold = parseFloat(document.getElementById('oversoldThreshold').value);
+                    params.overbought_threshold = parseFloat(document.getElementById('overboughtThreshold').value);
+                    params.stop_loss = parseFloat(document.getElementById('rsiStopLoss').value);
+                    params.take_profit = parseFloat(document.getElementById('rsiTakeProfit').value);
+                    break;
+                    
+                case 'bollinger':
+                    params.period = parseInt(document.getElementById('bollingerPeriod').value);
+                    params.std_multiplier = parseFloat(document.getElementById('stdMultiplier').value);
+                    params.stop_loss = parseFloat(document.getElementById('bollingerStopLoss').value);
+                    params.take_profit = parseFloat(document.getElementById('bollingerTakeProfit').value);
+                    break;
+                    
+                case 'custom':
+                    params.custom_code = getEditorCode();
+                    break;
+            }
+            
+            return params;
+        }
+        
+        // 验证策略参数
+        function validateStrategyParams(strategy, params) {
+            switch(strategy) {
+                case 'ma_cross':
+                    if (params.short_window >= params.long_window) {
+                        alert('短期均线周期必须小于长期均线周期！');
+                        return false;
+                    }
+                    break;
+                    
+                case 'rsi':
+                    if (params.oversold_threshold >= params.overbought_threshold) {
+                        alert('超卖阈值必须小于超买阈值！');
+                        return false;
+                    }
+                    break;
+                    
+                case 'custom':
+                    if (!params.custom_code || !params.custom_code.trim()) {
+                        alert('请输入自定义交易逻辑代码！');
+                        return false;
+                    }
+                    break;
+            }
+            return true;
+        }
+        
+                async function runBacktest() {
+            if (!currentData) {
+                alert('请先加载股票数据！');
+                return;
+            }
+            
+            const strategy = document.getElementById('strategy').value;
+            const stockCode = document.getElementById('stockCode').value.trim();
+            const params = getCurrentStrategyParams();
+            
+            // 验证参数
+            if (!validateStrategyParams(strategy, params)) {
+                return;
+            }
+            
+            showLoading('backtestLoading');
+            hideError('backtestError');
+            
+            try {
+                const response = await fetch('/api/backtest/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: stockCode,
+                        strategy: strategy,
+                        params: params,
+                        data: currentData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    backtestResults = result;
+                    displayBacktestResults(result);
+                    switchTab('backtest');
+                    showSuccess(`${getStrategyName(strategy)}回测完成！`);
+                } else {
+                    throw new Error(result.error || '回测失败');
+                }
+            } catch (error) {
+                showError('backtestError', `回测失败: ${error.message}`);
+            } finally {
+                hideLoading('backtestLoading');
+            }
+        }
+        
+        // 获取策略中文名称
+        function getStrategyName(strategy) {
+            const names = {
+                'ma_cross': '双均线交叉策略',
+                'rsi': 'RSI超买超卖策略',
+                'bollinger': '布林带策略',
+                'custom': '自定义策略'
+            };
+            return names[strategy] || strategy;
+        }
+        
+        // 显示回测结果
+        function displayBacktestResults(results) {
+            const metrics = results.metrics;
+            
+            const statsHtml = `
+                <div class="stat-card ${metrics.total_return >= 0 ? 'positive' : 'negative'}">
+                    <h3>总收益率</h3>
+                    <div class="value">${metrics.total_return.toFixed(2)}%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>年化收益率</h3>
+                    <div class="value">${metrics.annualized_return.toFixed(2)}%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>夏普比率</h3>
+                    <div class="value">${metrics.sharpe_ratio.toFixed(2)}</div>
+                </div>
+                <div class="stat-card negative">
+                    <h3>最大回撤</h3>
+                    <div class="value">${metrics.max_drawdown.toFixed(2)}%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>胜率</h3>
+                    <div class="value">${metrics.win_rate.toFixed(1)}%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>交易次数</h3>
+                    <div class="value">${metrics.total_trades}</div>
+                </div>
+            `;
+            
+            document.getElementById('backtestStats').innerHTML = statsHtml;
+            
+            // 重新绘制主图表，这次包含交易信号
+            if (currentData && results.trades) {
+                console.log('=== Backtest Results Debug ===');
+                console.log('Data points:', currentData.length);
+                console.log('Trades:', results.trades);
+                console.log('First trade:', results.trades[0]);
+                console.log('Last trade:', results.trades[results.trades.length - 1]);
+                
+                // 更新主图表显示交易信号
+                drawChart(currentData, results.trades);
+            }
+            
+            // 显示净值曲线
+            const equityChart = document.getElementById('equity-chart');
+            if (results.equity_curve && results.equity_curve.length > 0) {
+                drawEquityCurve(results.equity_curve);
+            } else {
+                equityChart.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">
+                        <div style="text-align: center;">
+                            <h3>📊 净值曲线</h3>
+                            <p>最终净值: ¥${metrics.final_value.toFixed(0)}</p>
+                            <p>收益率: ${metrics.total_return.toFixed(2)}%</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示交易记录
+            displayTrades(results.trades);
+        }
+        
+        // 显示交易记录
+        function displayTrades(trades) {
+            let tradesHtml = '<h3>交易记录</h3>';
+            
+            if (trades && trades.length > 0) {
+                tradesHtml += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>操作</th>
+                                <th>价格</th>
+                                <th>数量</th>
+                                <th>原因</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                trades.forEach(trade => {
+                    tradesHtml += `
+                        <tr>
+                            <td>${trade.date}</td>
+                            <td>${trade.action}</td>
+                            <td>¥${trade.price.toFixed(2)}</td>
+                            <td>${trade.quantity}</td>
+                            <td>${trade.reason}</td>
+                        </tr>
+                    `;
+                });
+                
+                tradesHtml += '</tbody></table>';
+            } else {
+                tradesHtml += '<p style="text-align: center; color: #666; margin-top: 2rem;">暂无交易记录</p>';
+            }
+            
+            document.getElementById('tradesTable').innerHTML = tradesHtml;
+        }
+        
+        // 显示成功信息
+        function showSuccess(message) {
+            // 简单的成功提示
+            const successEl = document.createElement('div');
+            successEl.className = 'success';
+            successEl.textContent = message;
+            successEl.style.position = 'fixed';
+            successEl.style.top = '20px';
+            successEl.style.right = '20px';
+            successEl.style.zIndex = '1000';
+            
+            document.body.appendChild(successEl);
+            
+            setTimeout(() => {
+                successEl.remove();
+            }, 3000);
+        }
+        
+        // 数据管理功能
+        async function getCacheStatus() {
+            const container = document.getElementById('cacheStatusContainer');
+            showLoading('cacheLoading');
+            hideError('cacheError');
+            hideSuccess('cacheSuccess');
+            
+            try {
+                const response = await fetch('/api/cache/status');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayCacheStatus(result);
+                    showSuccess('缓存状态获取成功！');
+                } else {
+                    throw new Error(result.detail || '获取缓存状态失败');
+                }
+            } catch (error) {
+                showError('cacheError', `获取缓存状态失败: ${error.message}`);
+            } finally {
+                hideLoading('cacheLoading');
+            }
+        }
+        
+        function displayCacheStatus(data) {
+            // 显示数据源状态
+            const sourceStatus = data.source_status || {};
+            let sourceHtml = '<div class="status-card">';
+            
+            Object.keys(sourceStatus).forEach(sourceName => {
+                const source = sourceStatus[sourceName];
+                const statusClass = source.api_calls_24h > 0 ? 'status-good' : 'status-warning';
+                
+                sourceHtml += `
+                    <div class="status-item">
+                        <span class="status-label">${sourceName}</span>
+                        <span class="status-value ${statusClass}">
+                            ${source.stock_count || 0} 支股票, ${source.api_calls_24h || 0} 次API调用
+                        </span>
+                    </div>
+                `;
+            });
+            
+            sourceHtml += '</div>';
+            document.getElementById('sourceStatusTable').innerHTML = sourceHtml;
+            
+            // 显示缓存统计
+            const cacheStats = data.cache_statistics || {};
+            let cacheHtml = '<div class="status-card">';
+            
+            Object.keys(cacheStats).forEach(sourceName => {
+                const stats = cacheStats[sourceName];
+                cacheHtml += `
+                    <div class="status-item">
+                        <span class="status-label">${sourceName} 响应时间</span>
+                        <span class="status-value">${Math.round(stats.avg_response_time_ms || 0)}ms</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">${sourceName} 成功率</span>
+                        <span class="status-value status-good">
+                            ${stats.successful_calls_24h || 0}/${stats.api_calls_24h || 0}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            cacheHtml += '</div>';
+            document.getElementById('cacheStatsTable').innerHTML = cacheHtml;
+        }
+        
+        async function warmUpCache() {
+            showLoading('cacheLoading');
+            hideError('cacheError');
+            
+            try {
+                const response = await fetch('/api/cache/warmup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        symbols: null, // 使用默认股票
+                        days: 365
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message || '缓存预热完成！');
+                    getCacheStatus(); // 刷新状态
+                } else {
+                    throw new Error(result.detail || '缓存预热失败');
+                }
+            } catch (error) {
+                showError('cacheError', `缓存预热失败: ${error.message}`);
+            } finally {
+                hideLoading('cacheLoading');
+            }
+        }
+        
+        async function updateStockList() {
+            showLoading('cacheLoading');
+            hideError('cacheError');
+            
+            try {
+                const response = await fetch('/api/data/update', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message || '股票列表更新完成！');
+                    getCacheStatus(); // 刷新状态
+                } else {
+                    throw new Error(result.detail || '股票列表更新失败');
+                }
+            } catch (error) {
+                showError('cacheError', `股票列表更新失败: ${error.message}`);
+            } finally {
+                hideLoading('cacheLoading');
+            }
+        }
+        
+        async function cleanupCache() {
+            if (!confirm('确定要清理缓存吗？这将删除30天前的数据。')) {
+                return;
+            }
+            
+            showLoading('cacheLoading');
+            hideError('cacheError');
+            
+            try {
+                const response = await fetch('/api/cache/cleanup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        days: 30
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message || '缓存清理完成！');
+                    getCacheStatus(); // 刷新状态
+                } else {
+                    throw new Error(result.detail || '缓存清理失败');
+                }
+            } catch (error) {
+                showError('cacheError', `缓存清理失败: ${error.message}`);
+            } finally {
+                hideLoading('cacheLoading');
+            }
+        }
+        
+        
+        // 自定义策略相关函数
+        function loadTemplate() {
+            const select = document.getElementById('templateSelect');
+            
+            const templates = {
+                'ma_cross': `# 双均线交叉策略
+# 使用current.ma5和current.ma20访问指标数据
+# 金叉买入
+if current.ma5 > current.ma20 and prev.ma5 <= prev.ma20 and position == 0:
+    signal = 1
+    reason = f'MA金叉买入: MA5={current.ma5:.2f} > MA20={current.ma20:.2f}'
+# 死叉卖出
+elif current.ma5 < current.ma20 and prev.ma5 >= prev.ma20 and position == 1:
+    signal = -1
+    reason = f'MA死叉卖出: MA5={current.ma5:.2f} < MA20={current.ma20:.2f}'
+`,
+    
+                'rsi_divergence': `# RSI超买超卖策略
+# 使用rsi14指标
+if current.rsi14 < 30 and position == 0:
+    signal = 1
+    reason = f'RSI超卖({current.rsi14:.1f})，买入'
+elif current.rsi14 > 70 and position == 1:
+    signal = -1
+    reason = f'RSI超买({current.rsi14:.1f})，卖出'
+`,
+    
+                'bollinger_bounce': `# 布林带反弹策略
+# 价格接近下轨买入，接近上轨卖出
+bb_range = current.bb_upper - current.bb_lower
+lower_trigger = current.bb_lower + bb_range * 0.1  # 下轨上方10%范围
+upper_trigger = current.bb_upper - bb_range * 0.1  # 上轨下方10%范围
+
+if current.close < lower_trigger and position == 0:
+    signal = 1
+    reason = f'价格{current.close:.2f}接近布林带下轨{current.bb_lower:.2f}，买入'
+elif current.close > upper_trigger and position == 1:
+    signal = -1
+    reason = f'价格{current.close:.2f}接近布林带上轨{current.bb_upper:.2f}，卖出'
+`,
+    
+                'volume_breakout': `# 成交量突破策略
+# 突破近期高点且成交量放大
+if current.close > prev.high and current.volume_ratio > 1.2 and position == 0:
+    signal = 1
+    reason = f'价格{current.close:.2f}突破前高{prev.high:.2f}，成交量放大{current.volume_ratio:.1f}倍'
+elif current.close < current.ma20 and position == 1:
+    signal = -1
+    reason = f'价格{current.close:.2f}跌破均线{current.ma20:.2f}'
+`,
+
+                'multi_factor': `# 多因子综合策略
+# 使用技术面综合评分和自定义因子
+tech_score = current.tech_score if not pd.isna(current.tech_score) else 0
+momentum = current.momentum_factor if not pd.isna(current.momentum_factor) else 0
+trend_strength = current.trend_strength if not pd.isna(current.trend_strength) else 0
+volume_factor = current.price_volume_factor if not pd.isna(current.price_volume_factor) else 0
+
+# 综合评分计算
+composite_score = (
+    tech_score * 0.3 +
+    momentum * 0.25 +
+    trend_strength * 0.25 +
+    volume_factor * 0.2
+)
+
+if composite_score > 0.6 and position == 0:
+    signal = 1
+    reason = f'综合评分买入: {composite_score:.2f}'
+elif composite_score < -0.6 and position == 1:
+    signal = -1
+    reason = f'综合评分卖出: {composite_score:.2f}'
+else:
+    signal = 0
+    reason = ''`,
+
+                'custom_indicators': `# 自定义指标策略
+# 使用自定义因子构建函数
+
+# 计算自定义20日RSI
+if len(history_20) >= 20:
+    my_rsi = custom_rsi(history_20['close'], period=20).iloc[-1]
+else:
+    my_rsi = 50
+
+# 计算自定义布林带位置
+if len(history_20) >= 20:
+    bb = custom_bollinger(history_20['close'], period=20, std_dev=2.5)
+    bb_position = bb['percent'].iloc[-1]
+else:
+    bb_position = 0.5
+
+# 价格强度检查
+price_strength = current.price_strength if not pd.isna(current.price_strength) else 1
+volume_surge = current.volume_ratio > 1.8 if not pd.isna(current.volume_ratio) else False
+
+# 多条件判断
+oversold = my_rsi < 25 and bb_position < 0.1 and volume_surge
+overbought = my_rsi > 75 and bb_position > 0.9
+
+if oversold and price_strength > 0.95 and position == 0:
+    signal = 1
+    reason = f'自定义指标买入: RSI={my_rsi:.1f}, BB位置={bb_position:.2f}'
+elif overbought and position == 1:
+    signal = -1
+    reason = f'自定义指标卖出: RSI={my_rsi:.1f}, BB位置={bb_position:.2f}'
+else:
+    signal = 0
+    reason = ''`,
+
+                'mean_reversion': `# 均值回归策略
+# 使用Z-Score标准化和多重确认
+
+# 计算价格Z-Score
+if len(history_20) >= 20:
+    price_zscore = custom_zscore(history_20['close'], 20).iloc[-1]
+else:
+    price_zscore = 0
+
+# 成交量和布林带确认
+volume_surge = current.volume_ratio > 2.0 if not pd.isna(current.volume_ratio) else False
+bb_position = current.bb20_percent_20 if not pd.isna(current.bb20_percent_20) else 0.5
+
+# 极端均值回归信号
+extreme_oversold = price_zscore < -2.5 and bb_position < 0.05
+extreme_overbought = price_zscore > 2.5 and bb_position > 0.95
+
+if extreme_oversold and volume_surge and position == 0:
+    signal = 1
+    reason = f'极端超卖回归: Z-Score={price_zscore:.2f}'
+elif extreme_overbought and position == 1:
+    signal = -1
+    reason = f'极端超买回归: Z-Score={price_zscore:.2f}'
+elif abs(price_zscore) < 0.5 and position == 1:
+    signal = -1
+    reason = f'回归均值: Z-Score={price_zscore:.2f}'
+else:
+    signal = 0
+    reason = ''`
+            };
+            
+            if (select.value && templates[select.value]) {
+                setEditorCode(templates[select.value]);
+                validateCode();
+            }
+        }
+        
+        function validateCode() {
+            const validation = document.getElementById('codeValidation');
+            const code = getEditorCode().trim();
+            
+            if (!code) {
+                validation.style.display = 'none';
+                return;
+            }
+            
+            // 基本语法检查
+            try {
+                // 检查是否包含必要的变量设置
+                if (!code.includes('signal') || !code.includes('reason')) {
+                    throw new Error('代码必须设置 signal 和 reason 变量');
+                }
+                
+                // 检查是否包含危险操作
+                const dangerous = ['import ', 'exec', 'eval', '__', 'open(', 'file', 'os.', 'sys.'];
+                for (let danger of dangerous) {
+                    if (code.includes(danger)) {
+                        throw new Error(`不允许使用 ${danger}`);
+                    }
+                }
+                
+                validation.innerHTML = '<strong>✅ 代码验证通过</strong><br>可以安全运行此策略';
+                validation.style.background = 'rgba(38, 166, 154, 0.15)';
+                validation.style.color = '#26A69A';
+                validation.style.border = '1px solid #26A69A';
+                validation.style.display = 'block';
+                
+            } catch (error) {
+                validation.innerHTML = `<strong>❌ 验证失败</strong><br>${error.message}`;
+                validation.style.background = 'rgba(239, 83, 80, 0.15)';
+                validation.style.color = '#EF5350';
+                validation.style.border = '1px solid #EF5350';
+                validation.style.display = 'block';
+            }
+        }
+        
+        // Monaco Editor实例
+        let monacoEditor = null;
+        
+        // 初始化Monaco Editor
+        function initMonacoEditor() {
+            require.config({ 
+                paths: { 
+                    'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' 
+                } 
+            });
+            
+            require(['vs/editor/editor.main'], function() {
+                const defaultCode = `# 可用变量:
+# current - 当前数据行 (包含: open, high, low, close, volume, ma5, ma10, ma20, rsi等147+个指标)
+# prev - 前一行数据
+# position - 当前持仓状态 (0=空仓, >0=持仓)
+# entry_price - 买入价格
+# data - 完整历史数据DataFrame
+
+# 示例代码: 简单的双均线交叉策略
+if not pd.isna(current.ma5) and not pd.isna(current.ma20):
+    if not pd.isna(prev.ma5) and not pd.isna(prev.ma20):
+        # 金叉买入
+        if current.ma5 > current.ma20 and prev.ma5 <= prev.ma20 and position == 0:
+            signal = 1
+            reason = f'MA金叉买入: MA5={current.ma5:.2f} > MA20={current.ma20:.2f}'
+        # 死叉卖出
+        elif current.ma5 < current.ma20 and prev.ma5 >= prev.ma20 and position > 0:
+            signal = -1
+            reason = f'MA死叉卖出: MA5={current.ma5:.2f} < MA20={current.ma20:.2f}'
+        else:
+            signal = 0
+            reason = ''
+
+# 必须设置的变量:
+# signal: 1=买入, -1=卖出, 0=无操作
+# reason: 交易理由文字说明`;
+                
+                monacoEditor = monaco.editor.create(document.getElementById('customCodeEditor'), {
+                    value: defaultCode,
+                    language: 'python',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    fontSize: 13,
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    lineNumbers: 'on',
+                    folding: true,
+                    renderWhitespace: 'selection',
+                    bracketPairColorization: { enabled: true },
+                    tabSize: 4,
+                    insertSpaces: true,
+                    suggest: {
+                        showKeywords: true,
+                        showSnippets: true
+                    }
+                });
+                
+                // 添加Python代码补全
+                monaco.languages.registerCompletionItemProvider('python', {
+                    provideCompletionItems: function(model, position) {
+                        const suggestions = [
+                            {
+                                label: 'current',
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: 'current.',
+                                documentation: '当前数据行，可访问所有技术指标'
+                            },
+                            {
+                                label: 'prev',
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: 'prev.',
+                                documentation: '前一行数据'
+                            },
+                            {
+                                label: 'position',
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: 'position',
+                                documentation: '当前持仓状态 (0=空仓, >0=持仓)'
+                            },
+                            {
+                                label: 'signal',
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: 'signal = ',
+                                documentation: '交易信号: 1=买入, -1=卖出, 0=无操作'
+                            },
+                            {
+                                label: 'reason',
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: 'reason = ',
+                                documentation: '交易理由说明'
+                            },
+                            // 常用指标
+                            {
+                                label: 'current.ma5',
+                                kind: monaco.languages.CompletionItemKind.Property,
+                                insertText: 'current.ma5',
+                                documentation: '5日移动平均线'
+                            },
+                            {
+                                label: 'current.ma20',
+                                kind: monaco.languages.CompletionItemKind.Property,
+                                insertText: 'current.ma20',
+                                documentation: '20日移动平均线'
+                            },
+                            {
+                                label: 'current.rsi',
+                                kind: monaco.languages.CompletionItemKind.Property,
+                                insertText: 'current.rsi',
+                                documentation: 'RSI相对强弱指标'
+                            },
+                            {
+                                label: 'current.macd',
+                                kind: monaco.languages.CompletionItemKind.Property,
+                                insertText: 'current.macd',
+                                documentation: 'MACD指标'
+                            }
+                        ];
+                        return { suggestions: suggestions };
+                    }
+                });
+            });
+        }
+        
+        // 获取编辑器代码
+        function getEditorCode() {
+            return monacoEditor ? monacoEditor.getValue() : '';
+        }
+        
+        // 设置编辑器代码
+        function setEditorCode(code) {
+            if (monacoEditor) {
+                monacoEditor.setValue(code);
+            }
+        }
+        
+        // 清空代码
+        function clearCode() {
+            if (monacoEditor) {
+                monacoEditor.setValue('');
+            }
+            document.getElementById('codeValidation').style.display = 'none';
+            document.getElementById('templateSelect').value = '';
+        }
+        
+        // 实现侧边栏可拖拽调整大小
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const sidebar = document.querySelector('.sidebar');
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            
+            resizer.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                
+                const diff = e.clientX - startX;
+                const newWidth = startWidth + diff;
+                const maxWidth = window.innerWidth * 0.5; // 最大50%屏幕宽度
+                
+                // 限制最小和最大宽度
+                if (newWidth >= 250 && newWidth <= maxWidth) {
+                    sidebar.style.width = newWidth + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setDefaultDates();
+            onStrategyChange(); // 初始化策略参数显示
+            initResizer(); // 初始化拖拽调整大小
+            
+            // 延迟初始化Monaco Editor
+            setTimeout(initMonacoEditor, 100);
+        });
+    </script>
+    <!-- Monaco Editor加载器 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</body>
+</html>

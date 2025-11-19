@@ -1,0 +1,20 @@
+# 数据源配置
+data_sources:
+  tushare:
+    enabled: true
+    token: "36384fd1e84ca5106bd81cf5891829ad0a8c170ee9c7071ddf51e498"  # 请填入您的tushare token
+
+# 数据库配置  
+database:
+  path: "data/stocks.db"  # SQLite数据库文件路径
+
+# API配置
+api:
+  host: "127.0.0.1"
+  port: 8000
+  debug: true
+
+# 回测配置
+backtest:
+  initial_capital: 100000  # 初始资金
+  commission: 0.001  # 手续费率
