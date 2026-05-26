@@ -32,16 +32,21 @@ class TushareDataSource(DataSource):
         token = str(self.config.get('token', '')).strip()
         if token.startswith('${') and token.endswith('}'):
             env_name = token[2:-1].strip()
-            if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
-                token = os.getenv(env_name, '').strip()
-            else:
-                token = ''
+            if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
+                raise ValueError("Invalid token environment variable name in config. Use format ${TUSHARE_TOKEN}.")
+            if not env_name.startswith('TUSHARE_'):
+                raise ValueError("Token environment variable must start with TUSHARE_.")
+            token = os.getenv(env_name, '').strip()
         
         if not token:
             token = os.getenv(DEFAULT_TOKEN_ENV_VAR, '').strip()
         
         if not token:
-            raise ValueError(f"Tushare token is required. Please set it in config.yaml or environment variable {DEFAULT_TOKEN_ENV_VAR}")
+            raise ValueError(
+                f"Tushare token is required. Please set it in config.yaml "
+                f"(use '${{{DEFAULT_TOKEN_ENV_VAR}}}' syntax for env vars) "
+                f"or environment variable {DEFAULT_TOKEN_ENV_VAR}."
+            )
         
         ts.set_token(token)
         self.pro = ts.pro_api()
