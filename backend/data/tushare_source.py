@@ -30,8 +30,6 @@ class TushareDataSource(DataSource):
         if token.startswith('${') and token.endswith('}'):
             env_name = token[2:-1].strip()
             token = os.getenv(env_name, '').strip()
-        elif token == 'YOUR_TUSHARE_TOKEN_HERE':
-            token = ''
         
         if not token:
             token = os.getenv('TUSHARE_TOKEN', '').strip()
