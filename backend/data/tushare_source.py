@@ -4,6 +4,7 @@ Tushare数据源
 """
 import tushare as ts
 import pandas as pd
+import os
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from .base import DataSource
@@ -25,9 +26,18 @@ class TushareDataSource(DataSource):
         self.source_name = 'tushare'
         
         # 设置tushare token
-        token = self.config.get('token', '')
+        token = str(self.config.get('token', '')).strip()
+        if token.startswith('${') and token.endswith('}'):
+            env_name = token[2:-1].strip()
+            token = os.getenv(env_name, '').strip()
+        elif token == 'YOUR_TUSHARE_TOKEN_HERE':
+            token = ''
+        
         if not token:
-            raise ValueError("Tushare token is required. Please set it in config.yaml")
+            token = os.getenv('TUSHARE_TOKEN', '').strip()
+        
+        if not token:
+            raise ValueError("Tushare token is required. Please set it in config.yaml or environment variable TUSHARE_TOKEN")
         
         ts.set_token(token)
         self.pro = ts.pro_api()

@@ -2,7 +2,7 @@
 data_sources:
   tushare:
     enabled: true
-    token: "YOUR_TUSHARE_TOKEN_HERE"  # 请填入您的tushare token
+    token: "${TUSHARE_TOKEN}"  # 请填入您的tushare token 或使用环境变量 TUSHARE_TOKEN
 
 # 数据库配置  
 database:
