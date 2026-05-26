@@ -5,10 +5,13 @@ Tushare数据源
 import tushare as ts
 import pandas as pd
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from .base import DataSource
 from ..database import StockDatabase
+
+DEFAULT_TOKEN_ENV_VAR = 'TUSHARE_TOKEN'
 
 
 class TushareDataSource(DataSource):
@@ -29,13 +32,16 @@ class TushareDataSource(DataSource):
         token = str(self.config.get('token', '')).strip()
         if token.startswith('${') and token.endswith('}'):
             env_name = token[2:-1].strip()
-            token = os.getenv(env_name, '').strip()
+            if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
+                token = os.getenv(env_name, '').strip()
+            else:
+                token = ''
         
         if not token:
-            token = os.getenv('TUSHARE_TOKEN', '').strip()
+            token = os.getenv(DEFAULT_TOKEN_ENV_VAR, '').strip()
         
         if not token:
-            raise ValueError("Tushare token is required. Please set it in config.yaml or environment variable TUSHARE_TOKEN")
+            raise ValueError(f"Tushare token is required. Please set it in config.yaml or environment variable {DEFAULT_TOKEN_ENV_VAR}")
         
         ts.set_token(token)
         self.pro = ts.pro_api()
