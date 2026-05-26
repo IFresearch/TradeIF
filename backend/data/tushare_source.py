@@ -34,9 +34,15 @@ class TushareDataSource(DataSource):
         if token.startswith('${') and token.endswith('}'):
             env_name = token[2:-1].strip()
             if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
-                raise ValueError("Invalid token environment variable name format. Use ${VAR_NAME}.")
+                raise ValueError(
+                    "Invalid token environment variable name format. "
+                    "Name must start with a letter/underscore and contain only letters, digits, and underscores."
+                )
             if not env_name.startswith(REQUIRED_TOKEN_PREFIX):
-                raise ValueError(f"Token environment variable must start with {REQUIRED_TOKEN_PREFIX}.")
+                raise ValueError(
+                    f"Token environment variable must start with {REQUIRED_TOKEN_PREFIX} "
+                    "to avoid accidentally reading unrelated system environment variables."
+                )
             token = os.getenv(env_name, '').strip()
         
         if not token:
