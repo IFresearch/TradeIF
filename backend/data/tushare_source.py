@@ -12,6 +12,7 @@ from .base import DataSource
 from ..database import StockDatabase
 
 DEFAULT_TOKEN_ENV_VAR = 'TUSHARE_TOKEN'
+REQUIRED_TOKEN_PREFIX = 'TUSHARE_'
 
 
 class TushareDataSource(DataSource):
@@ -33,9 +34,9 @@ class TushareDataSource(DataSource):
         if token.startswith('${') and token.endswith('}'):
             env_name = token[2:-1].strip()
             if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
-                raise ValueError("Invalid token environment variable name in config. Use format ${TUSHARE_TOKEN}.")
-            if not env_name.startswith('TUSHARE_'):
-                raise ValueError("Token environment variable must start with TUSHARE_.")
+                raise ValueError("Invalid token environment variable name format. Use ${VAR_NAME}.")
+            if not env_name.startswith(REQUIRED_TOKEN_PREFIX):
+                raise ValueError(f"Token environment variable must start with {REQUIRED_TOKEN_PREFIX}.")
             token = os.getenv(env_name, '').strip()
         
         if not token:
