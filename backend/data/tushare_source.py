@@ -4,10 +4,15 @@ Tushare数据源
 """
 import tushare as ts
 import pandas as pd
+import os
+import re
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from .base import DataSource
 from ..database import StockDatabase
+
+DEFAULT_TOKEN_ENV_VAR = 'TUSHARE_TOKEN'
+REQUIRED_TOKEN_PREFIX = 'TUSHARE_'
 
 
 class TushareDataSource(DataSource):
@@ -25,9 +30,32 @@ class TushareDataSource(DataSource):
         self.source_name = 'tushare'
         
         # 设置tushare token
-        token = self.config.get('token', '')
+        token = str(self.config.get('token', '')).strip()
+        token_env_name = DEFAULT_TOKEN_ENV_VAR
+        if token.startswith('${') and token.endswith('}'):
+            env_name = token[2:-1].strip()
+            if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', env_name):
+                raise ValueError(
+                    "Invalid token environment variable name format. "
+                    f"Got '{env_name}'. Name must start with a letter/underscore and contain only letters, digits, and underscores."
+                )
+            if not env_name.startswith(REQUIRED_TOKEN_PREFIX):
+                raise ValueError(
+                    f"Token environment variable '{env_name}' must start with {REQUIRED_TOKEN_PREFIX} "
+                    "to avoid accidentally reading unrelated system environment variables."
+                )
+            token_env_name = env_name
+            token = os.getenv(env_name, '').strip()
+        
         if not token:
-            raise ValueError("Tushare token is required. Please set it in config.yaml")
+            token = os.getenv(token_env_name, '').strip()
+        
+        if not token:
+            raise ValueError(
+                f"Tushare token is required. Please set it in config.yaml "
+                f"(use '${{{DEFAULT_TOKEN_ENV_VAR}}}' syntax for env vars) "
+                f"or set environment variable {token_env_name}."
+            )
         
         ts.set_token(token)
         self.pro = ts.pro_api()
